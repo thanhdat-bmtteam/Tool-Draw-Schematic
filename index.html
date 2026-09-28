@@ -511,7 +511,13 @@ function render(forExport=false){
     cy+=ph+20;
   }
   const nL=L.ends.length,nR=R.ends.length, nmax=Math.max(nL,nR,1);
-  const bx=CX+24, bw=CW-48, by=cy+56+22, bh=Math.max(280,nmax*13+90);
+  const bx=CX+24, bw=CW-48, by=cy+56+22;
+  let bh=Math.max(280,nmax*13+90);
+  // kéo dài bo mạch để khối giữa lấp đầy chiều cao, khối Kết nối chỉ cao vừa nội dung
+  const linkBlock=S.link.length?(64+56+12+S.link.length*134+4):0;
+  const sideBottom=Math.max(L.bottom,R.bottom,top+300);
+  const centerBottom=cy+56+22+bh+24+linkBlock;
+  if(sideBottom>centerBottom) bh+=sideBottom-centerBottom;
   const mcuH=56+22+bh+24;
   let mcuSVG=panel(CX,cy,CW,mcuH,'mcu')+`<g data-uid="mcu">`+(S.mcu.img?`<rect x="${bx}" y="${by}" width="${bw}" height="${bh}" rx="10" fill="#fff" stroke="#d0a400" stroke-width="2"/>`+placeImg(S.mcu.img,null,bx+6,by+6,bw-12,bh-12):board(S.mcu.v,bx,by,bw,bh,S.mcu.chip||S.mcu.name))+`</g>`;
   if(pwrLines){const yb=cy+3;
@@ -544,7 +550,7 @@ function render(forExport=false){
   // ---- wires
   function wires(ends,side,group){
     if(!ends.length) return '';
-    const n=ends.length, sp=Math.min(14,(bh-70)/Math.max(1,n-1)), tmid=by+bh/2;
+    const n=ends.length, sp=Math.min(18,(bh-70)/Math.max(1,n-1)), tmid=by+bh/2;
     const sorted=ends.slice().sort((a,b)=>a.y-b.y);
     sorted.forEach((e,i)=>e.ty=tmid+(i-(n-1)/2)*sp);
     const down=sorted.filter(e=>e.ty>e.y+0.5), up=sorted.filter(e=>e.ty<e.y-0.5);
@@ -790,20 +796,23 @@ async function cloudDel(id,name){
   if(error){toast('Không xóa được: '+error.message);return;}
   if(cur.id===id)setCur(null,'');renderDlg();
 }
+const USER_DOMAIN=CFG.USERNAME_DOMAIN||'sodokhoi.local';
+const toEmail=v=>{v=(v||'').trim().toLowerCase();return v&&!v.includes('@')?v+'@'+USER_DOMAIN:v;};
+const showUser=e=>(e||'').endsWith('@'+USER_DOMAIN)?e.slice(0,-(USER_DOMAIN.length+1)):e;
 async function renderDlg(errMsg){
   const B=$('dlgB');
   if(!sb){B.innerHTML=cfgProblem?`<div class="err" style="margin:0">${esc(cfgProblem)}</div>`:`<p>Chưa cấu hình Supabase. Mở tệp <b>config.js</b>, điền <b>SUPABASE_URL</b> và <b>SUPABASE_ANON_KEY</b> của dự án Supabase, rồi tải lại trang.</p><p class="hint">Hướng dẫn chi tiết nằm trong README.md. Khi chưa cấu hình, công cụ vẫn chạy bình thường và lưu trên trình duyệt này.</p>`;return;}
-  if(!sess){B.innerHTML=`<label class="f">Email</label><input class="fi" id="em" type="email" autocomplete="email">
+  if(!sess){B.innerHTML=`<label class="f">Tên đăng nhập hoặc email</label><input class="fi" id="em" type="text" autocomplete="username" autocapitalize="off" spellcheck="false">
     <label class="f">Mật khẩu</label><input class="fi" id="pw" type="password" autocomplete="current-password">
     <div class="btns" style="margin-top:12px"><button class="btn pri" id="bIn">Đăng nhập</button><button class="btn" id="bUp">Tạo tài khoản</button></div>
     ${errMsg?`<div class="err">${esc(errMsg)}</div>`:''}<p class="hint">Dữ liệu mỗi tài khoản là riêng tư, người khác không xem được.</p>`;
-    const go=async up=>{const email=$('em').value.trim(),password=$('pw').value;if(!email||!password)return renderDlg('Nhập email và mật khẩu.');
+    const go=async up=>{const email=toEmail($('em').value),password=$('pw').value;if(!email||!password)return renderDlg('Nhập email và mật khẩu.');
       const r=up?await sb.auth.signUp({email,password,options:{emailRedirectTo:location.href.split('#')[0]}}):await sb.auth.signInWithPassword({email,password});
       if(r.error)return renderDlg(r.error.message);
       if(up&&!r.data.session){B.innerHTML='<p>Đã gửi email xác nhận tới <b>'+esc(email)+'</b>. Bấm vào liên kết trong email rồi quay lại đây đăng nhập.</p>';}};
     $('bIn').onclick=()=>go(false);$('bUp').onclick=()=>go(true);$('pw').onkeydown=e=>{if(e.key==='Enter')go(false)};
     return;}
-  B.innerHTML=`<p style="margin:0 0 10px">Đăng nhập: <b>${esc(sess.user.email)}</b> <button class="btn sm" id="bOut" style="margin-left:6px">Đăng xuất</button></p>
+  B.innerHTML=`<p style="margin:0 0 10px">Đăng nhập: <b>${esc(showUser(sess.user.email))}</b> <button class="btn sm" id="bOut" style="margin-left:6px">Đăng xuất</button></p>
     <div class="btns"><button class="btn pri" id="bCS">${cur.id?'Lưu thay đổi':'Lưu lên đám mây'}</button><button class="btn" id="bCN">Lưu thành bản mới</button><button class="btn" id="bNew">Sơ đồ trống mới</button><button class="btn" id="bChk">Kiểm tra kết nối</button></div><div id="chk"></div>
     <p class="hint">Tên dự án lấy theo tiêu đề sơ đồ. Phím tắt Ctrl+S để lưu nhanh.</p><h2 style="font-size:13px;color:var(--muted);margin:16px 0 0">Dự án của bạn</h2><div class="plist" id="pls"><div class="hint">Đang tải…</div></div>`;
   $('bOut').onclick=async()=>{await sb.auth.signOut();setCur(null,'');};
