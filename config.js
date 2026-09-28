@@ -3,6 +3,6 @@
 // Để trống URL và key thì công cụ chạy offline, lưu trên trình duyệt.
 window.APP_CONFIG = {
   SUPABASE_URL: "https://wqdjchhangkeqqaijlgn.supabase.co",
-  SUPABASE_ANON_KEY: "",          // dán Publishable key vào đây
+  SUPABASE_ANON_KEY: "sb_publishable_TsRb6ma1QMY3gsQ8DH_NgA_OS0m6Ayl",          // dán Publishable key vào đây
   STORAGE_BUCKET: "images"        // tên bucket kho ảnh (tạo bằng schema.sql)
 };
