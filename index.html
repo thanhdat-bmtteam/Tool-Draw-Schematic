@@ -56,7 +56,13 @@ aside{background:var(--surface);border-right:1px solid var(--line);display:flex;
 .cat{display:flex;flex-direction:column;gap:4px}
 .ci{display:flex;gap:10px;align-items:center;padding:6px;border-radius:8px;border:1px solid transparent;background:none;text-align:left;cursor:pointer;width:100%}
 .ci:hover{background:var(--surface2);border-color:var(--line)}
-.ci svg{flex:none;width:58px;height:40px;background:#fff;border-radius:6px;border:1px solid var(--line)}
+.ci svg,.ci .ti{flex:none;width:58px;height:40px;background:#fff;border-radius:6px;border:1px solid var(--line);object-fit:contain}
+.mc .ti{width:100%;aspect-ratio:160/110;object-fit:contain;background:#fff;border-radius:5px;display:block}
+.sech{display:flex;align-items:center;gap:8px;margin:0 0 8px}.sech h2{flex:1;margin:0}
+.badge{display:inline-block;font-size:10.5px;font-weight:600;padding:1px 6px;border-radius:99px;background:var(--accent-soft);color:var(--accent);margin-left:4px;vertical-align:1px}
+.ci.ed{cursor:pointer}.ci .acts{margin-left:auto;display:flex;gap:2px}
+.libnote{font-size:12.5px;color:var(--muted);background:var(--surface2);border:1px dashed var(--line);border-radius:8px;padding:8px 10px;margin-bottom:8px}
+.insp.tpl{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent-soft)}
 .ci b{display:block;font-size:13.5px;font-weight:600}
 .ci small{display:block;color:var(--muted);font-size:12px}
 .ci .plus{margin-left:auto;font-size:18px;color:var(--accent);padding:0 4px}
@@ -269,29 +275,32 @@ function artSVG(a){ if(!a) return ART.generic(); const f=ART[a.k]||ART.generic; 
 
 /* ============ MCU BOARD (drawn at real size) ============ */
 function board(v,x,y,w,h,label){
-  const V={esp:{c:'#131313',m:true,usb:2},nodemcu:{c:'#141414',m:true,usb:1},uno:{c:'#0f7f8a'},mega:{c:'#0f7f8a'},nano:{c:'#1d5fa8'},bluepill:{c:'#1f4fa6'},pico:{c:'#1f7a3a'}}[v]||{c:'#131313',m:true,usb:1};
-  let s=`<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="10" fill="${V.c}" stroke="#000" stroke-opacity=".5" stroke-width="2"/>`;
-  const cols=Math.max(8,Math.floor((w-40)/22));
-  const hdr=(yy)=>{let t='';for(let i=0;i<cols;i++){const cx=x+22+i*((w-44)/(cols-1));t+=`<rect x="${cx-7}" y="${yy-7}" width="14" height="14" fill="#1f1f1f" stroke="#444"/><circle cx="${cx}" cy="${yy}" r="3.2" fill="url(#gGold)"/>`;}return t;};
-  s+=hdr(y+18)+hdr(y+36)+hdr(y+h-36)+hdr(y+h-18);
-  const my=y+52, mh=h-104;
+  const V={esp:{c:'#131313',usb:2},nodemcu:{c:'#141414',usb:1},uno:{c:'#0f7f8a'},mega:{c:'#0f7f8a'},nano:{c:'#1d5fa8'},bluepill:{c:'#1f4fa6'},pico:{c:'#1f7a3a'}}[v]||{c:'#131313',usb:1};
+  const k=Math.max(.45,Math.min(1,h/260));            // hệ số thu nhỏ chi tiết khi bo nhỏ
+  let s=`<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="${10*k}" fill="${V.c}" stroke="#000" stroke-opacity=".5" stroke-width="${2*k}"/>`;
+  const pitch=22*k,pad=14*k,cols=Math.max(6,Math.floor((w-40*k)/pitch));
+  const hdr=(yy)=>{let t='';for(let i=0;i<cols;i++){const cx=x+22*k+i*((w-44*k)/(cols-1));t+=`<rect x="${cx-pad/2}" y="${yy-pad/2}" width="${pad}" height="${pad}" fill="#1f1f1f" stroke="#444" stroke-width="${k}"/><circle cx="${cx}" cy="${yy}" r="${3.2*k}" fill="url(#gGold)"/>`;}return t;};
+  const small=h<200;
+  s+=small?hdr(y+14*k)+hdr(y+h-14*k):hdr(y+18)+hdr(y+36)+hdr(y+h-36)+hdr(y+h-18);
+  const my=small?y+28*k:y+52, mh=small?h-56*k:h-104;
+  const fs=(max,txt)=>Math.max(6,Math.min(max,(w*.5)/Math.max(4,String(txt).length)*1.7));
   if(v==='uno'||v==='mega'){
-    s+=`<rect x="${x-8}" y="${my+6}" width="54" height="${Math.min(60,mh*.35)}" fill="url(#gSteel)" stroke="#777"/><rect x="${x-6}" y="${my+mh-Math.min(50,mh*.3)-6}" width="46" height="${Math.min(50,mh*.3)}" fill="#1a1a1a"/>`;
-    s+=`<rect x="${x+w*.42}" y="${my+mh*.52}" width="${w*.46}" height="${Math.min(40,mh*.22)}" rx="3" fill="#1a1a1a"/><ellipse cx="${x+w*.3}" cy="${my+mh*.35}" rx="16" ry="7" fill="url(#gSteel)"/>`;
-    s+=`<text x="${x+w*.62}" y="${my+mh*.34}" font-family="Arial" font-size="26" font-weight="700" fill="#e9fbff" text-anchor="middle">${esc(label)}</text>`;
+    s+=`<rect x="${x-8*k}" y="${my+6*k}" width="${54*k}" height="${Math.min(60*k,mh*.35)}" fill="url(#gSteel)" stroke="#777"/><rect x="${x-6*k}" y="${my+mh-Math.min(50*k,mh*.3)-6*k}" width="${46*k}" height="${Math.min(50*k,mh*.3)}" fill="#1a1a1a"/>`;
+    s+=`<rect x="${x+w*.42}" y="${my+mh*.58}" width="${w*.46}" height="${Math.min(40*k,mh*.22)}" rx="3" fill="#1a1a1a"/>`;
+    s+=`<text x="${x+w*.64}" y="${my+mh*.42}" font-family="Arial" font-size="${fs(26,label)}" font-weight="700" fill="#e9fbff" text-anchor="middle">${esc(label)}</text>`;
   } else if(v==='nano'||v==='bluepill'||v==='pico'){
-    s+=`<rect x="${x-8}" y="${my+mh/2-16}" width="40" height="32" rx="3" fill="url(#gSteel)" stroke="#777"/>`;
-    const q=Math.min(mh*.7,120);
-    s+=`<rect x="${x+w/2-q/2}" y="${my+mh/2-q/2}" width="${q}" height="${q}" rx="4" fill="#161616" transform="rotate(45 ${x+w/2} ${my+mh/2})"/><text x="${x+w/2}" y="${my+mh/2+6}" font-family="Arial" font-size="16" font-weight="700" fill="#cfcfcf" text-anchor="middle">${esc(label)}</text>`;
-    s+=`<rect x="${x+w-80}" y="${my+10}" width="22" height="14" fill="#f1f1f1"/><rect x="${x+w-80}" y="${my+mh-24}" width="22" height="14" fill="#e53935"/>`;
+    s+=`<rect x="${x-8*k}" y="${my+mh/2-16*k}" width="${40*k}" height="${32*k}" rx="3" fill="url(#gSteel)" stroke="#777"/>`;
+    const q=Math.min(mh*.62,120);
+    s+=`<rect x="${x+w/2-q/2}" y="${my+mh/2-q/2}" width="${q}" height="${q}" rx="4" fill="#161616" transform="rotate(45 ${x+w/2} ${my+mh/2})"/><text x="${x+w/2}" y="${my+mh/2+fs(16,label)*.35}" font-family="Arial" font-size="${Math.min(fs(16,label),q*.32)}" font-weight="700" fill="#cfcfcf" text-anchor="middle">${esc(label)}</text>`;
   } else {
-    const n=V.usb||1;
-    for(let i=0;i<n;i++){const uy=my+(mh/(n+1))*(i+1)-20;s+=`<rect x="${x-10}" y="${uy}" width="48" height="40" rx="5" fill="url(#gSteel)" stroke="#777"/><rect x="${x-4}" y="${uy+14}" width="36" height="12" rx="4" fill="#333"/><rect x="${x+62}" y="${uy+6}" width="20" height="28" rx="3" fill="#ddd"/><rect x="${x+66}" y="${uy+12}" width="12" height="16" rx="2" fill="#d32f2f"/>`;}
-    const mx=x+w*.5, mw=w*.36, mmy=my+mh*.08, mmh=mh*.84;
-    s+=`<rect x="${mx}" y="${mmy}" width="${mw}" height="${mmh}" rx="4" fill="url(#gSteel)" stroke="#6f777d" stroke-width="2"/>`;
-    s+=`<path d="M${mx+mw+2} ${mmy+10} h14 v${mmh*.2} h-10 v${mmh*.2} h10 v${mmh*.2} h-10" stroke="#e0c060" stroke-width="3" fill="none"/>`;
-    s+=`<text x="${mx+mw/2}" y="${mmy+mmh/2}" font-family="Arial" font-size="${Math.min(22,mw/7)}" font-weight="700" fill="#4a4f54" text-anchor="middle" transform="rotate(90 ${mx+mw/2} ${mmy+mmh/2})">${esc(label)}</text>`;
-    for(let i=0;i<5;i++) s+=`<rect x="${x+100+i*22}" y="${my+mh*.45}" width="12" height="18" fill="#2a2a2a"/>`;
+    const n=V.usb||1, uw=48*k, uh=40*k;
+    for(let i=0;i<n;i++){const uy=my+(mh/(n+1))*(i+1)-uh/2;s+=`<rect x="${x-10*k}" y="${uy}" width="${uw}" height="${uh}" rx="${5*k}" fill="url(#gSteel)" stroke="#777"/><rect x="${x-4*k}" y="${uy+14*k}" width="${36*k}" height="${12*k}" rx="${4*k}" fill="#333"/><rect x="${x+62*k}" y="${uy+6*k}" width="${20*k}" height="${28*k}" rx="3" fill="#ddd"/><rect x="${x+66*k}" y="${uy+12*k}" width="${12*k}" height="${16*k}" rx="2" fill="#d32f2f"/>`;}
+    const mx=x+w*.5, mw=w*.36, mmy=my+mh*.06, mmh=mh*.88;
+    s+=`<rect x="${mx}" y="${mmy}" width="${mw}" height="${mmh}" rx="${4*k}" fill="url(#gSteel)" stroke="#6f777d" stroke-width="${2*k}"/>`;
+    s+=`<path d="M${mx+mw+2*k} ${mmy+10*k} h${14*k} v${mmh*.2} h${-10*k} v${mmh*.2} h${10*k} v${mmh*.2} h${-10*k}" stroke="#e0c060" stroke-width="${3*k}" fill="none"/>`;
+    const tf=Math.min(22,mw/7,mmh/Math.max(4,String(label).length)*1.6);
+    s+=`<text x="${mx+mw/2}" y="${mmy+mmh/2}" font-family="Arial" font-size="${tf}" font-weight="700" fill="#4a4f54" text-anchor="middle" dominant-baseline="middle" transform="rotate(90 ${mx+mw/2} ${mmy+mmh/2})">${esc(label)}</text>`;
+    if(!small) for(let i=0;i<5;i++) s+=`<rect x="${x+100+i*22}" y="${my+mh*.45}" width="12" height="18" fill="#2a2a2a"/>`;
   }
   return s;
 }
@@ -374,12 +383,44 @@ function templatePins(iface,volt){
   return ({ '1wire':[V,'1-Wire','GND'], i2c:[V,'SDA','SCL','GND'], uart:[V,'TX (OUT)','RX (IN)','GND'], spi:[V,'MOSI','MISO','SCK','CS','GND'], digital:[V,'SIGNAL','GND'], analog:[V,'AOUT','GND'], pwm:[V,'PWM','GND'] })[iface]||[V,'SIGNAL','GND'];
 }
 function makeItem(group,c){
-  if(group==='power') return {uid:uid(),t:c.t,name:c.name,out:c.out,art:c.art,img:null};
-  if(group==='link') return {uid:uid(),t:c.t,l:c.l,via:c.via,r:c.r,text:c.text,imgL:null,imgR:null};
+  if(group==='mcu') return {t:c.t,name:c.name,chip:c.chip,v:c.v,img:c.img||null};
+  if(group==='power') return {uid:uid(),t:c.t,name:c.name,out:c.out,art:c.art,img:c.img||null};
+  if(group==='link') return {uid:uid(),t:c.t,name:c.name,l:c.l,via:c.via,r:c.r,text:c.text,imgL:c.imgL||null,imgR:c.imgR||null};
   const volt=c.volt||'5V';
-  return {uid:uid(),t:c.t,name:c.name,sub:c.sub||'',iface:c.iface,volt,pins:c.pins?c.pins.slice():templatePins(c.iface,volt),art:c.art,img:null,acc:(c.acc||[]).slice()};
+  return {uid:uid(),t:c.t,name:c.name,sub:c.sub||'',iface:c.iface,volt,pins:c.pins?c.pins.slice():templatePins(c.iface,volt),art:c.art,img:c.img||null,acc:(c.acc||[]).slice()};
 }
-const find=(g,t)=>CAT[g].find(c=>c.t===t);
+/* ---------- THƯ VIỆN (sửa / ẩn / thêm mẫu, lưu lại) ---------- */
+let LIB=(()=>{try{return JSON.parse(localStorage.getItem('sodokhoi.lib'))||{}}catch(e){return {}}})();
+function libFix(){LIB.ov=LIB.ov||{};LIB.hide=LIB.hide||{};LIB.custom=LIB.custom||{};}libFix();
+function lib(g,withHidden){
+  const hid=LIB.hide[g]||[], ov=LIB.ov[g]||{};
+  const base=CAT[g].filter(c=>withHidden||!hid.includes(c.t)).map(c=>ov[c.t]?{...c,...ov[c.t],_b:1,_ov:1}:{...c,_b:1});
+  return base.concat((LIB.custom[g]||[]).map(c=>({...c,_c:1})));
+}
+const find=(g,t)=>lib(g,true).find(c=>c.t===t);
+function toTemplate(g,it){
+  const pick=(o,ks)=>{const r={};ks.forEach(k=>{if(o[k]!==undefined&&o[k]!==null)r[k]=Array.isArray(o[k])?o[k].slice():o[k];});return r;};
+  if(g==='mcu')return pick(it,['t','name','chip','v','img']);
+  if(g==='power')return pick(it,['t','name','out','art','img']);
+  if(g==='link'){const r=pick(it,['t','name','l','via','r','text','imgL','imgR']);r.name=r.name||((it.via||'')+' → '+String(it.text||'').replace(/\n/g,' '));return r;}
+  return pick(it,['t','name','sub','iface','volt','pins','art','img','acc']);
+}
+let libT;function saveLib(){try{localStorage.setItem('sodokhoi.lib',JSON.stringify(LIB))}catch(e){}clearTimeout(libT);libT=setTimeout(pushLib,400);}
+async function pushLib(){if(!cloudReady())return;const {error}=await sb.from('library').upsert({user_id:sess.user.id,data:LIB,updated_at:new Date().toISOString()});if(error)toast('Chưa lưu được thư viện lên đám mây: '+error.message);}
+async function pullLib(){if(!cloudReady())return;const {data,error}=await sb.from('library').select('data').eq('user_id',sess.user.id).maybeSingle();
+  if(error){console.warn(error);return;}
+  if(data&&data.data){LIB=data.data;libFix();try{localStorage.setItem('sodokhoi.lib',JSON.stringify(LIB))}catch(e){}renderPane();}
+  else if(Object.keys(LIB.ov).length||Object.keys(LIB.hide).length||Object.keys(LIB.custom).length)pushLib();}
+function saveTemplate(g,it,asNew){
+  const tp=toTemplate(g,it);
+  const isBuiltin=CAT[g].some(c=>c.t===tp.t);
+  const inCustom=(LIB.custom[g]||[]).findIndex(c=>c.t===tp.t);
+  if(asNew||(!isBuiltin&&inCustom<0)){tp.t='c'+Date.now().toString(36);(LIB.custom[g]=LIB.custom[g]||[]).push(tp);}
+  else if(isBuiltin){(LIB.ov[g]=LIB.ov[g]||{})[tp.t]=tp;}
+  else LIB.custom[g][inCustom]=tp;
+  saveLib();return tp.t;
+}
+let TPL=null, libEdit=false;
 function presetState(){
   const m=find('mcu','esp32s3');
   return {title:'',
@@ -585,15 +626,17 @@ function render(forExport=false){
 const $=id=>document.getElementById(id);
 const TABS=[{k:'power',t:'Nguồn',c:'#c62828'},{k:'mcu',t:'Vi điều khiển',c:'#d69e00'},{k:'in',t:'Đầu vào',c:'#1976d2'},{k:'out',t:'Đầu ra',c:'#2e9e3e'},{k:'link',t:'Kết nối',c:'#6a2fb0'}];
 let q='';
+function cthumb(g,c){const src=g==='link'?(c.imgL||c.imgR):c.img;if(src)return `<img class="ti" src="${esc(src)}" alt="" loading="lazy">`;if(g==='mcu')return `<svg viewBox="0 0 160 110" width="58" height="40">${DEFS}${board(c.v,8,8,144,94,c.chip)}</svg>`;return g==='link'?thumb(linkArt(c.l)):thumb(c.art);}
 function thumb(a,w=58,h=40){return `<svg viewBox="0 0 160 110" width="${w}" height="${h}" aria-hidden="true">${DEFS}${artSVG(a)}</svg>`;}
-function findItem(u){for(const g of ['power','in','out','link']){const it=S[g].find(i=>i.uid===u);if(it)return {g,it};}return u==='mcu'?{g:'mcu',it:S.mcu}:null;}
+function findItem(u){if(u==='__tpl')return TPL;for(const g of ['power','in','out','link']){const it=S[g].find(i=>i.uid===u);if(it)return {g,it};}return u==='mcu'?{g:'mcu',it:S.mcu}:null;}
 
 function renderTabs(){
   $('tabs').innerHTML=TABS.map(t=>{const n=t.k==='mcu'?1:S[t.k].length;return `<button class="tab" role="tab" style="--tabc:${t.c}" aria-selected="${tab===t.k}" data-t="${t.k}"><span class="dot" style="background:${t.c}"></span>${t.t}<span class="n">${t.k==='mcu'?esc(S.mcu.name.split(' ')[0]):n+' mục'}</span></button>`}).join('');
 }
 function inspector(){
   const f=selUid&&findItem(selUid); if(!f) return '';
-  const {g,it}=f; let h=`<div class="insp"><h3><span>Chỉnh sửa</span><button class="ib" data-act="close" aria-label="Đóng">✕</button></h3>`;
+  const {g,it}=f; const isT=selUid==='__tpl';
+  let h=`<div class="insp ${isT?'tpl':''}"><h3><span>${isT?(TPL.isNew?'Mẫu mới trong thư viện':'Sửa mẫu trong thư viện'):'Chỉnh sửa'}</span><button class="ib" data-act="close" aria-label="Đóng">✕</button></h3>${isT?'<p class="hint" style="margin:-4px 0 6px">Thay đổi ở đây áp dụng cho các lần thêm linh kiện sau này, không ảnh hưởng sơ đồ đang vẽ.</p>':''}`;
   if(g==='link'){
     const opts=(v,side)=>Object.keys(LINKART).map(k=>`<option value="${k}" ${k===v?'selected':''}>${LINKART[k]}</option>`).join('');
     h+=`<div class="two"><div><label class="f">Hình bên trái</label><select class="fi" data-f="l">${opts(it.l)}</select></div><div><label class="f">Hình bên phải</label><select class="fi" data-f="r">${opts(it.r)}</select></div></div>
@@ -616,18 +659,30 @@ function inspector(){
     const pv=it.img?`<img src="${it.img}" alt="">`:(g==='mcu'?`<svg viewBox="0 0 160 110">${DEFS}${board(it.v,6,6,148,98,it.chip)}</svg>`:thumb(it.art,92,64));
     h+=`<label class="f">Hình ảnh</label><div class="imgbox"><div class="pv">${pv}</div><div class="btns"><button class="btn sm" data-act="gallery" data-slot="img">Chọn từ kho ảnh…</button><button class="btn sm" data-act="img" data-slot="img">Tải ảnh lên…</button>${it.img?'<button class="btn sm" data-act="resetimg">Dùng hình minh họa</button>':''}</div></div><p class="hint">Có thể dán ảnh (Ctrl+V) khi đang chọn linh kiện.</p><label class="f">Xóa nền khi đưa ảnh vào</label>${bgSelect('bgSel')}${it.img?'<div class="btns" style="margin-top:6px"><button class="btn sm" data-act="rebg">Xử lý lại ảnh hiện tại</button></div>':''}`;
   }
+  if(isT){h+=`<div class="btns" style="margin-top:14px"><button class="btn pri" data-act="tplsave">Lưu mẫu</button><button class="btn" data-act="close">Hủy</button>${TPL.ov?'<button class="btn" data-act="tplreset">Khôi phục mẫu gốc</button>':''}</div>`;}
+  else{const ex=find(g,it.t);h+=`<label class="f">Thư viện</label><div class="btns">${ex?`<button class="btn sm" data-act="libupd">Cập nhật mẫu "${esc(ex.name)}"</button>`:''}<button class="btn sm" data-act="libnew">Lưu thành mẫu mới</button></div><p class="hint">Lưu tên, chân, ảnh… của linh kiện này để lần sau thêm vào là có sẵn.</p>`;}
   return h+'</div>';
+}
+function libRows(g){
+  const all=lib(g).filter(c=>!q||(c.name+' '+(c.sub||'')+' '+(c.via||'')).toLowerCase().includes(q.toLowerCase()));
+  const nh=(LIB.hide[g]||[]).length;
+  return `<div class="libnote">Bấm vào mẫu để sửa (tên, chân, ảnh…). ✕ để ẩn mẫu có sẵn hoặc xóa mẫu tự tạo. Thư viện được lưu ${cloudReady()?'trên đám mây theo tài khoản':'trên trình duyệt này (đăng nhập để lưu lên đám mây)'}.</div>
+  <div class="btns" style="margin-bottom:8px"><button class="btn sm" data-act="tplnew">+ Mẫu mới</button>${nh?`<button class="btn sm" data-act="unhide">Hiện lại ${nh} mẫu đã ẩn</button>`:''}${(Object.keys(LIB.ov[g]||{}).length||nh||(LIB.custom[g]||[]).length)?'<button class="btn sm" data-act="libreset">Khôi phục mặc định</button>':''}</div>
+  <input class="search" id="q" placeholder="Tìm mẫu…" value="${esc(q)}"><div class="cat">${all.map(c=>`<div class="ci ed" data-edit="${esc(c.t)}" role="button" tabindex="0">${cthumb(g,c)}<span><b>${esc(c.name)}${c._ov?'<span class="badge">đã sửa</span>':''}${c._c?'<span class="badge">mẫu riêng</span>':''}</b><small>${esc(g==='power'?'Ra '+c.out:g==='mcu'?c.chip:g==='link'?c.via:[c.sub,IFACES[c.iface]].filter(Boolean).join(' · '))}</small></span><span class="acts"><button class="ib" data-rmt="${esc(c.t)}" aria-label="${c._c?'Xóa mẫu':'Ẩn mẫu'}" title="${c._c?'Xóa mẫu':'Ẩn mẫu'}">✕</button></span></div>`).join('')}</div>`;
 }
 function renderPane(){
   let h=inspector();
-  if(tab==='mcu'){
-    h+=`<div class="sec"><h2>Chọn bo mạch</h2><div class="mcugrid">${CAT.mcu.map(m=>`<button class="mc" data-mcu="${m.t}" aria-pressed="${S.mcu.t===m.t}"><svg viewBox="0 0 160 110">${DEFS}${board(m.v,8,8,144,94,m.chip)}</svg><b>${esc(m.name)}</b></button>`).join('')}</div></div>`;
+  const tog=`<button class="btn sm" data-act="libedit">${libEdit?'Xong':'Sửa danh sách'}</button>`;
+  if(libEdit){
+    h+=`<div class="sec"><div class="sech"><h2>Thư viện ${esc(TABS.find(x=>x.k===tab).t.toLowerCase())}</h2>${tog}</div>${libRows(tab)}</div>`;
+  } else if(tab==='mcu'){
+    h+=`<div class="sec"><div class="sech"><h2>Chọn bo mạch</h2>${tog}</div><div class="mcugrid">${lib('mcu').map(m=>`<button class="mc" data-mcu="${esc(m.t)}" aria-pressed="${S.mcu.t===m.t}">${m.img?`<img class="ti" src="${esc(m.img)}" alt="">`:`<svg viewBox="0 0 160 110">${DEFS}${board(m.v,8,8,144,94,m.chip)}</svg>`}<b>${esc(m.name)}</b></button>`).join('')}</div></div>`;
     if(!selUid) h+=`<button class="btn" data-act="editmcu">Chỉnh tên, chữ trên chip hoặc thay ảnh</button>`;
   } else {
     const items=S[tab];
     h+=`<div class="sec"><h2>Đã chọn (${items.length})</h2><div class="chosen">${items.length?items.map((it,i)=>`<div class="row ${it.uid===selUid?'sel':''}" data-sel="${it.uid}"><span class="nm">${esc(tab==='link'?(it.via+' → '+it.text.replace(/\n/g,' ')):it.name)}</span><span class="if">${tab==='power'?esc(it.out):tab==='link'?'':IFACES[it.iface]||''}</span><button class="ib" data-act="up" data-i="${i}" aria-label="Lên">↑</button><button class="ib" data-act="down" data-i="${i}" aria-label="Xuống">↓</button><button class="ib" data-act="del" data-i="${i}" aria-label="Xóa">✕</button></div>`).join(''):`<div class="empty">Chưa có mục nào. Chọn từ danh sách bên dưới để thêm vào sơ đồ.</div>`}</div></div>`;
-    const list=CAT[tab].filter(c=>!q||(c.name+' '+(c.sub||'')).toLowerCase().includes(q.toLowerCase()));
-    h+=`<div class="sec"><h2>Thêm vào khối</h2><input class="search" id="q" placeholder="Tìm linh kiện…" value="${esc(q)}"><div class="cat">${list.map(c=>`<button class="ci" data-add="${c.t}">${tab==='link'?thumb(linkArt(c.l)):thumb(c.art)}<span><b>${esc(c.name)}</b><small>${esc(tab==='power'?'Ra '+c.out:tab==='link'?c.via:[c.sub,IFACES[c.iface]].filter(Boolean).join(' · '))}</small></span><span class="plus">+</span></button>`).join('')}
+    const list=lib(tab).filter(c=>!q||(c.name+' '+(c.sub||'')).toLowerCase().includes(q.toLowerCase()));
+    h+=`<div class="sec"><div class="sech"><h2>Thêm vào khối</h2>${tog}</div><input class="search" id="q" placeholder="Tìm linh kiện…" value="${esc(q)}"><div class="cat">${list.map(c=>`<button class="ci" data-add="${esc(c.t)}">${cthumb(tab,c)}<span><b>${esc(c.name)}</b><small>${esc(tab==='power'?'Ra '+c.out:tab==='link'?c.via:[c.sub,IFACES[c.iface]].filter(Boolean).join(' · '))}</small></span><span class="plus">+</span></button>`).join('')}
     ${tab==='in'||tab==='out'?`<button class="ci" data-add="__custom"><svg viewBox="0 0 160 110" width="58" height="40">${DEFS}${ART.generic('#607d8b','?')}</svg><span><b>Linh kiện tùy chỉnh</b><small>Tự đặt tên, chân và ảnh</small></span><span class="plus">+</span></button>`:''}</div></div>`;
   }
   $('pane').innerHTML=h;
@@ -645,13 +700,27 @@ function applyZoom(){
 function refresh(){save();renderTabs();renderPane();renderDiagram();$('title').value=S.title||'';}
 function toast(m){const t=$('toast');t.textContent=m;t.classList.add('on');clearTimeout(toast.h);toast.h=setTimeout(()=>t.classList.remove('on'),2600);}
 
-$('tabs').onclick=e=>{const b=e.target.closest('[data-t]');if(!b)return;tab=b.dataset.t;q='';if(selUid){const f=findItem(selUid);if(!f||f.g!==tab)selUid=null;}renderTabs();renderPane();renderDiagram();};
+$('tabs').onclick=e=>{const b=e.target.closest('[data-t]');if(!b)return;tab=b.dataset.t;q='';if(selUid==='__tpl'){selUid=null;TPL=null;}if(selUid){const f=findItem(selUid);if(!f||f.g!==tab)selUid=null;}renderTabs();renderPane();renderDiagram();};
 $('pane').addEventListener('click',e=>{
-  const t=e.target.closest('[data-act],[data-add],[data-sel],[data-mcu]'); if(!t) return;
-  if(t.dataset.mcu){const m=find('mcu',t.dataset.mcu);S.mcu={t:m.t,name:m.name,chip:m.chip,v:m.v,img:null};selUid='mcu';return refresh();}
+  const t=e.target.closest('[data-act],[data-add],[data-sel],[data-mcu],[data-rmt],[data-edit]'); if(!t) return;
+  if(t.dataset.rmt){e.stopPropagation();const g=tab,id=t.dataset.rmt;const c=find(g,id);
+    if(CAT[g].some(x=>x.t===id)){(LIB.hide[g]=LIB.hide[g]||[]).push(id);toast('Đã ẩn "'+c.name+'"');}
+    else{if(!confirm('Xóa mẫu "'+c.name+'" khỏi thư viện?'))return;LIB.custom[g]=(LIB.custom[g]||[]).filter(x=>x.t!==id);}
+    if(TPL&&TPL.it.t===id){TPL=null;selUid=null;}saveLib();return renderPane();}
+  if(t.dataset.edit){const g=tab,c=find(g,t.dataset.edit);const it=makeItem(g,c);if(g==='mcu')it.uid='__tplm';
+    TPL={g,it,isNew:false,ov:!!(LIB.ov[g]||{})[c.t]};selUid='__tpl';$('pane').scrollTop=0;return renderPane();}
+  if(t.dataset.mcu){const m=find('mcu',t.dataset.mcu);S.mcu=makeItem('mcu',m);selUid='mcu';return refresh();}
   if(t.dataset.add){const c=t.dataset.add==='__custom'?{t:'custom',name:'Linh kiện mới',sub:'',iface:'digital',art:{k:'generic',p:['#607d8b','']}}:find(tab,t.dataset.add);const it=makeItem(tab,c);S[tab].push(it);selUid=it.uid;$('pane').scrollTop=0;return refresh();}
   const a=t.dataset.act;
-  if(a==='close'){selUid=null;return refresh();}
+  if(a==='close'){selUid=null;TPL=null;return refresh();}
+  if(a==='libedit'){libEdit=!libEdit;q='';if(!libEdit&&selUid==='__tpl'){selUid=null;TPL=null;}return renderPane();}
+  if(a==='tplnew'){const g=tab;const base=g==='mcu'?{t:'',name:'Bo mạch mới',chip:'MCU',v:'esp'}:g==='power'?{t:'',name:'Nguồn mới',out:'5V DC',art:{k:'generic',p:['#607d8b','']}}:g==='link'?{t:'',name:'Kết nối mới',l:'router',via:'Wi-Fi',r:'phone-app',text:'Mô tả\nứng dụng'}:{t:'',name:'Linh kiện mới',sub:'',iface:'digital',art:{k:'generic',p:['#607d8b','']}};
+    TPL={g,it:makeItem(g,base),isNew:true};selUid='__tpl';$('pane').scrollTop=0;return renderPane();}
+  if(a==='tplsave'){const nt=saveTemplate(TPL.g,TPL.it,TPL.isNew);toast('Đã lưu mẫu "'+(TPL.it.name||TPL.it.via)+'" vào thư viện');TPL=null;selUid=null;return renderPane();}
+  if(a==='tplreset'){if(!confirm('Khôi phục mẫu này về như ban đầu?'))return;delete (LIB.ov[TPL.g]||{})[TPL.it.t];saveLib();TPL=null;selUid=null;toast('Đã khôi phục mẫu gốc');return renderPane();}
+  if(a==='unhide'){LIB.hide[tab]=[];saveLib();return renderPane();}
+  if(a==='libreset'){if(!confirm('Khôi phục danh sách '+TABS.find(x=>x.k===tab).t+' về mặc định? Các mẫu đã sửa, đã ẩn và mẫu tự tạo của khối này sẽ bị xóa.'))return;delete LIB.ov[tab];delete LIB.hide[tab];delete LIB.custom[tab];saveLib();TPL=null;if(selUid==='__tpl')selUid=null;return renderPane();}
+  if(a==='libupd'||a==='libnew'){const f=findItem(selUid);if(!f)return;const nt=saveTemplate(f.g,f.it,a==='libnew');f.it.t=nt;save();toast(a==='libnew'?'Đã lưu thành mẫu mới trong thư viện':'Đã cập nhật mẫu trong thư viện');return renderPane();}
   if(a==='editmcu'){selUid='mcu';return refresh();}
   if(a==='gallery'){openGallery(t.dataset.slot);return;}
   if(a==='rebg'){const f=findItem(selUid);if(!f||!f.it.img)return;t.disabled=true;t.textContent='Đang xử lý…';
@@ -667,6 +736,7 @@ $('pane').addEventListener('click',e=>{
     return refresh();}
   if(t.dataset.sel){selUid=selUid===t.dataset.sel?null:t.dataset.sel;return refresh();}
 });
+$('pane').addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target.matches('[data-edit]')){e.preventDefault();e.target.click();}});
 $('pane').addEventListener('change',e=>{
   const t=e.target;
   if(t.id==='bgSel'){setBgMode(t.value);return;}
@@ -681,7 +751,7 @@ let inT; $('pane').addEventListener('input',e=>{
   if(k==='pins') f.it.pins=t.value.split('\n').map(s=>s.trim()).filter(Boolean); else f.it[k]=t.value;
   clearTimeout(inT); inT=setTimeout(()=>{save();renderDiagram();const r=document.querySelector(`[data-sel="${selUid}"] .nm`);if(r&&k==='name')r.textContent=t.value;},150);
 });
-$('paper').addEventListener('click',e=>{const g=e.target.closest('[data-uid]');if(!g)return;const u=g.dataset.uid;const f=findItem(u);if(!f)return;selUid=u;tab=f.g;q='';refresh();});
+$('paper').addEventListener('click',e=>{const g=e.target.closest('[data-uid]');if(!g)return;TPL=null;libEdit=false;const u=g.dataset.uid;const f=findItem(u);if(!f)return;selUid=u;tab=f.g;q='';refresh();});
 $('title').oninput=e=>{S.title=e.target.value;clearTimeout(inT);inT=setTimeout(()=>{save();renderDiagram();},200);};
 
 /* images */
@@ -924,7 +994,7 @@ async function renderDlg(errMsg){
 function openDlg(){renderDlg();$('dlg').showModal();}
 $('bCloud').onclick=openDlg;$('dlgX').onclick=()=>$('dlg').close();
 document.addEventListener('keydown',e=>{if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='s'){e.preventDefault();cloudSave(false);}});
-if(sb){sb.auth.getSession().then(({data})=>{sess=data.session;showStatus();});sb.auth.onAuthStateChange((_e,s2)=>{sess=s2;showStatus();if($('dlg').open)renderDlg();});}
+if(sb){sb.auth.getSession().then(({data})=>{sess=data.session;showStatus();pullLib();});sb.auth.onAuthStateChange((ev,s2)=>{const was=sess&&sess.user.id;sess=s2;showStatus();if($('dlg').open)renderDlg();if(s2&&s2.user.id!==was)pullLib();});}
 window.addEventListener('beforeunload',e=>{if(sb&&sess&&dirty){e.preventDefault();e.returnValue='';}});
 dirty=false;
 
