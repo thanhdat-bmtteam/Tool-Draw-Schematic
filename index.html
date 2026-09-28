@@ -614,7 +614,7 @@ function inspector(){
       <select class="fi" data-act="addacc" style="margin-top:6px"><option value="">+ Thêm thiết bị gắn kèm…</option>${Object.entries(ACC).map(([k,v])=>`<option value="${k}">${v.name}</option>`).join('')}</select>`;
     }
     const pv=it.img?`<img src="${it.img}" alt="">`:(g==='mcu'?`<svg viewBox="0 0 160 110">${DEFS}${board(it.v,6,6,148,98,it.chip)}</svg>`:thumb(it.art,92,64));
-    h+=`<label class="f">Hình ảnh</label><div class="imgbox"><div class="pv">${pv}</div><div class="btns"><button class="btn sm" data-act="gallery" data-slot="img">Chọn từ kho ảnh…</button><button class="btn sm" data-act="img" data-slot="img">Tải ảnh lên…</button>${it.img?'<button class="btn sm" data-act="resetimg">Dùng hình minh họa</button>':''}</div></div><p class="hint">Có thể dán ảnh (Ctrl+V) khi đang chọn linh kiện.</p><label class="f">Xóa nền khi đưa ảnh vào</label>${bgSelect('bgSel')}${it.img?'<div class="btns" style="margin-top:6px"><button class="btn sm" data-act="rebg">Xóa nền ảnh hiện tại</button></div>':''}`;
+    h+=`<label class="f">Hình ảnh</label><div class="imgbox"><div class="pv">${pv}</div><div class="btns"><button class="btn sm" data-act="gallery" data-slot="img">Chọn từ kho ảnh…</button><button class="btn sm" data-act="img" data-slot="img">Tải ảnh lên…</button>${it.img?'<button class="btn sm" data-act="resetimg">Dùng hình minh họa</button>':''}</div></div><p class="hint">Có thể dán ảnh (Ctrl+V) khi đang chọn linh kiện.</p><label class="f">Xóa nền khi đưa ảnh vào</label>${bgSelect('bgSel')}${it.img?'<div class="btns" style="margin-top:6px"><button class="btn sm" data-act="rebg">Xử lý lại ảnh hiện tại</button></div>':''}`;
   }
   return h+'</div>';
 }
@@ -656,7 +656,6 @@ $('pane').addEventListener('click',e=>{
   if(a==='gallery'){openGallery(t.dataset.slot);return;}
   if(a==='rebg'){const f=findItem(selUid);if(!f||!f.it.img)return;t.disabled=true;t.textContent='Đang xử lý…';
     (async()=>{try{const bl=await (await fetch(f.it.img)).blob();const r=await processImage(bl,bgMode==='off'?'fast':bgMode);
-      if(r.note==='complex'||r.note==='none'||r.note==='already'||r.note==='aifail'){toast(bgNote(r.note));refresh();return;}
       f.it.img=cloudReady()?await uploadToStore(r.blob,r.type,(f.it.name||'anh')+'-xoanen'):r.dataURL;refresh();toast(bgNote(r.note));}
     catch(e){toast('Không xử lý được: '+(e.message||e));refresh();}})();return;}
   if(a==='img'){pendingSlot=t.dataset.slot;$('fImg').value='';$('fImg').click();return;}
@@ -671,6 +670,7 @@ $('pane').addEventListener('click',e=>{
 $('pane').addEventListener('change',e=>{
   const t=e.target;
   if(t.id==='bgSel'){setBgMode(t.value);return;}
+  if(t.matches('[data-sharp]')){setSharp(t.checked);return;}
   if(t.dataset.act==='addacc'&&t.value){const f=findItem(selUid);f.it.acc=f.it.acc||[];f.it.acc.push(t.value);return refresh();}
   const k=t.dataset.f; if(!k) return; const f=findItem(selUid); if(!f) return;
   if(k==='iface'||k==='volt'){f.it[k]=t.value;f.it.pins=templatePins(f.it.iface,f.it.volt);return refresh();}
@@ -690,9 +690,26 @@ let pendingSlot='img';
 let bgMode=(()=>{try{return localStorage.getItem('sodokhoi.bg')||'fast'}catch(e){return 'fast'}})();
 function setBgMode(m){bgMode=m;try{localStorage.setItem('sodokhoi.bg',m)}catch(e){}}
 const BG_OPTS=[['fast','Tự động (nền trơn/trắng)'],['ai','AI (ảnh chụp, nền phức tạp)'],['off','Không xóa nền']];
-const bgSelect=id=>`<select class="fi" id="${id}">${BG_OPTS.map(([k,n])=>`<option value="${k}" ${k===bgMode?'selected':''}>${n}</option>`).join('')}</select>`;
+const bgSelect=id=>`<label style="display:flex;gap:8px;align-items:center;font-size:13px;margin:0 0 6px"><input type="checkbox" data-sharp ${sharpOn?'checked':''}> Làm nét ảnh (khuyên dùng)</label><select class="fi" id="${id}">${BG_OPTS.map(([k,n])=>`<option value="${k}" ${k===bgMode?'selected':''}>${n}</option>`).join('')}</select>`;
 function blobToImage(blob){return new Promise((ok,no)=>{const u=URL.createObjectURL(blob);const im=new Image();im.onload=()=>{URL.revokeObjectURL(u);ok(im)};im.onerror=()=>{URL.revokeObjectURL(u);no(new Error('Không đọc được tệp ảnh này'))};im.src=u;});}
-function toCanvas(im,max){const sc=Math.min(1,max/Math.max(im.width,im.height));const c=document.createElement('canvas');c.width=Math.max(1,Math.round(im.width*sc));c.height=Math.max(1,Math.round(im.height*sc));const x=c.getContext('2d',{willReadFrequently:true});x.drawImage(im,0,0,c.width,c.height);return c;}
+function toCanvas(im,max){
+  // thu nhỏ nhiều bước (mỗi lần tối đa 1/2) để ảnh không bị răng cưa / nhòe
+  let w=im.width,h=im.height,src=im;const sc=Math.min(1,max/Math.max(w,h));const tw=Math.max(1,Math.round(w*sc)),th=Math.max(1,Math.round(h*sc));
+  while(w/2>=tw*1.02&&h/2>=th*1.02){const c=document.createElement('canvas');c.width=Math.round(w/2);c.height=Math.round(h/2);const x=c.getContext('2d');x.imageSmoothingEnabled=true;x.imageSmoothingQuality='high';x.drawImage(src,0,0,c.width,c.height);src=c;w=c.width;h=c.height;}
+  const c=document.createElement('canvas');c.width=tw;c.height=th;const x=c.getContext('2d',{willReadFrequently:true});x.imageSmoothingEnabled=true;x.imageSmoothingQuality='high';x.drawImage(src,0,0,tw,th);return c;
+}
+function upscale(c,f){const o=document.createElement('canvas');o.width=Math.round(c.width*f);o.height=Math.round(c.height*f);const x=o.getContext('2d',{willReadFrequently:true});x.imageSmoothingEnabled=true;x.imageSmoothingQuality='high';x.drawImage(c,0,0,o.width,o.height);return o;}
+function sharpen(c,amt){
+  // unsharp mask 3x3, giữ nguyên kênh alpha
+  const x=c.getContext('2d',{willReadFrequently:true}),w=c.width,h=c.height;if(w<3||h<3)return c;
+  const img=x.getImageData(0,0,w,h),s=img.data,o=new Uint8ClampedArray(s);
+  for(let y=1;y<h-1;y++)for(let xx=1;xx<w-1;xx++){const i=(y*w+xx)*4;if(s[i+3]<8)continue;
+    for(let k=0;k<3;k++){const bl=(s[i-4+k]+s[i+4+k]+s[i-w*4+k]+s[i+w*4+k]+s[i-4-w*4+k]+s[i+4-w*4+k]+s[i-4+w*4+k]+s[i+4+w*4+k]+s[i+k])/9;o[i+k]=s[i+k]+(s[i+k]-bl)*amt;}}
+  img.data.set(o);x.putImageData(img,0,0);return c;
+}
+let sharpOn=(()=>{try{return localStorage.getItem('sodokhoi.sharp')!=='0'}catch(e){return true}})();
+function setSharp(v){sharpOn=v;try{localStorage.setItem('sodokhoi.sharp',v?'1':'0')}catch(e){}}
+const IMG_MAX=1000;
 function removeBgFast(c){
   const x=c.getContext('2d',{willReadFrequently:true}),w=c.width,h=c.height,img=x.getImageData(0,0,w,h),d=img.data;
   const bi=[];for(let i=0;i<w;i++){bi.push(i,(h-1)*w+i);}for(let j=1;j<h-1;j++){bi.push(j*w,j*w+w-1);}
@@ -742,16 +759,19 @@ async function removeBgAI(blob){
 }
 async function processImage(file,mode){
   mode=mode||bgMode;
-  let im=await blobToImage(file);let c=toCanvas(im,900);let note='';
+  let im=await blobToImage(file);let c=toCanvas(im,1400);let note='';const srcMax=Math.max(im.width,im.height);
   if(mode==='ai'){
-    try{const src=await new Promise(ok=>c.toBlob(ok,'image/png'));const out=await removeBgAI(src);c=toCanvas(await blobToImage(out),900);note='ai';}
+    try{const src=await new Promise(ok=>c.toBlob(ok,'image/png'));const out=await removeBgAI(src);c=toCanvas(await blobToImage(out),1400);note='ai';}
     catch(e){console.warn(e);showStatus();note='aifail';const r=removeBgFast(c);if(r==='ok')note='aifail-fast';}
   } else if(mode==='fast'){note=removeBgFast(c);}
   if(mode!=='off')c=trimCanvas(c);
-  c=toCanvas(c,640);
+  const m=Math.max(c.width,c.height);
+  if(m>IMG_MAX){c=toCanvas(c,IMG_MAX);if(sharpOn)sharpen(c,.45);}
+  else if(m<480){c=upscale(c,Math.min(2,700/m));if(sharpOn)sharpen(c,.8);}
+  else if(sharpOn&&srcMax>m*1.3)sharpen(c,.35);
   let type='image/webp';if(!c.toDataURL(type).startsWith('data:image/webp'))type='image/png';
-  const blob=await new Promise((ok,no)=>c.toBlob(b=>b?ok(b):no(new Error('Không xử lý được ảnh')),type,.9));
-  return {blob,type,dataURL:c.toDataURL(type,.9),note};
+  const blob=await new Promise((ok,no)=>c.toBlob(b=>b?ok(b):no(new Error('Không xử lý được ảnh')),type,.95));
+  return {blob,type,dataURL:c.toDataURL(type,.95),note};
 }
 function bgNote(n){return {ok:'Đã xóa nền',ai:'Đã xóa nền bằng AI',already:'Ảnh đã có nền trong suốt',complex:'Nền phức tạp, chưa xóa được – thử chế độ AI',none:'Không tìm thấy nền để xóa',aifail:'AI không chạy được trên trình duyệt này, giữ nguyên ảnh','aifail-fast':'AI không chạy được, đã xóa nền bằng chế độ tự động'}[n]||'';}
 const resizeImage=f=>processImage(f);
@@ -783,7 +803,7 @@ async function inlineRemote(svg){
 $('bSvg').onclick=async()=>{toast('Đang chuẩn bị SVG…');saveFile(fname('svg'),await inlineRemote(render(true)),'image/svg+xml');};
 $('bPng').onclick=async()=>{
   toast('Đang tạo PNG…');const svg=await inlineRemote(render(true));const {w,h}=lastSVG;const im=new Image();
-  im.onload=()=>{const sc=2,c=document.createElement('canvas');c.width=w*sc;c.height=h*sc;const x=c.getContext('2d');x.fillStyle='#fff';x.fillRect(0,0,c.width,c.height);x.drawImage(im,0,0,c.width,c.height);c.toBlob(b=>{if(b)saveFile(fname('png'),b,'image/png');else toast('Không tạo được ảnh PNG.');},'image/png');};
+  im.onload=()=>{const sc=3,c=document.createElement('canvas');c.width=w*sc;c.height=h*sc;const x=c.getContext('2d');x.fillStyle='#fff';x.fillRect(0,0,c.width,c.height);x.drawImage(im,0,0,c.width,c.height);c.toBlob(b=>{if(b)saveFile(fname('png'),b,'image/png');else toast('Không tạo được ảnh PNG.');},'image/png');};
   im.onerror=()=>toast('Không tạo được ảnh PNG. Hãy thử Xuất SVG.');
   im.src='data:image/svg+xml;charset=utf-8,'+encodeURIComponent(svg);
 };
@@ -824,9 +844,10 @@ async function renderGallery(msg){
   const B=$('gB');
   if(!sb){B.innerHTML=`<p>${esc(cfgProblem||'Chưa cấu hình Supabase trong config.js.')}</p><p class="hint">Vẫn có thể dùng nút "Tải ảnh lên…" để chèn ảnh từ máy.</p>`;return;}
   if(!sess){B.innerHTML=`<p>Đăng nhập để dùng kho ảnh trên Supabase.</p><button class="btn pri" id="gLogin">Đăng nhập</button>`;$('gLogin').onclick=()=>{$('gdlg').close();openDlg();};return;}
-  B.innerHTML=`<div class="btns"><button class="btn pri" id="gUp">Tải ảnh lên kho…</button></div><label class="f">Xóa nền khi tải lên</label>${bgSelect('bgSelG')}<p class="hint">Chọn một ảnh để gán cho linh kiện đang chọn. Ảnh được cắt sát, thu về tối đa 640px.</p>${msg?`<div class="${msg.err?'err':'ok'}">${esc(msg.t)}</div>`:''}<div class="gal" id="gGrid"><div class="hint">Đang tải…</div></div>`;
+  B.innerHTML=`<div class="btns"><button class="btn pri" id="gUp">Tải ảnh lên kho…</button></div><label class="f">Xóa nền khi tải lên</label>${bgSelect('bgSelG')}<p class="hint">Chọn một ảnh để gán cho linh kiện đang chọn. Ảnh được cắt sát, giữ tối đa 1000px.</p>${msg?`<div class="${msg.err?'err':'ok'}">${esc(msg.t)}</div>`:''}<div class="gal" id="gGrid"><div class="hint">Đang tải…</div></div>`;
   $('gUp').onclick=()=>{$('fGal').value='';$('fGal').click();};
   $('bgSelG').onchange=e=>setBgMode(e.target.value);
+  $('gB').querySelector('[data-sharp]').onchange=e=>setSharp(e.target.checked);
   const {data,error}=await sb.storage.from(BUCKET).list(sess.user.id,{limit:500,sortBy:{column:'created_at',order:'desc'}});
   const G=$('gGrid');if(!G)return;
   if(error){G.innerHTML=`<div class="err">Không đọc được kho ảnh: ${esc(error.message)}. Kiểm tra đã chạy phần Storage trong schema.sql chưa.</div>`;return;}
